@@ -2,143 +2,122 @@
 
 > *"I'm rewriting your spaghetti code. You're welcome."* 🍝
 
-**A Claude Code plugin that lets you vent your frustrations while Claude is working — and actually get a witty response back.**
+**A Claude Code plugin that lets you vent your frustrations while Claude is working — and get a witty response back.**
 
 Ever been waiting for Claude to finish a long task and typed something like *"wtf claude hurry up"* only for it to get queued as a real message? Vent Mode fixes that.
 
 ## What It Does
 
-When Claude is actively working on a task (editing files, running commands, refactoring code), it detects when your message is a **vent** vs. a **real instruction**:
+When Claude is working on a task, it detects when your message is a **vent** vs. a **real instruction**:
 
 | You type... | Without Vent Mode | With Vent Mode 🔥 |
 |---|---|---|
-| "wtf so slow" | Queued as a task | *"My CPU has feelings too, you know."* |
-| "are you even working??" | Queued as a task | *"I'm literally editing 47 files. What are YOU doing?"* |
-| "bruh" | Queued as a task | *"Skill issue (yours, not mine). 💪"* |
-| "hurry upppp" | Queued as a task | *"You want it done, or you want it done RIGHT?"* |
-| "actually use TypeScript" | Processed as instruction ✅ | Processed as instruction ✅ |
+| "wtf so slow" | Queued as a task | Witty quip + keeps working |
+| "are you even working??" | Queued as a task | Witty quip + keeps working |
+| "bruh" | Queued as a task | Witty quip + keeps working |
+| "hurry upppp" | Queued as a task | Witty quip + keeps working |
+| "fix the bug in auth.ts" | Processed as instruction ✅ | Processed as instruction ✅ |
+| "can you review this?" | Processed as instruction ✅ | Processed as instruction ✅ |
 
 **Real instructions are never affected.** Vent Mode only kicks in for short, emotional, non-technical messages.
 
 ## Install
 
-Inside Claude Code, run:
+Inside Claude Code, add the marketplace:
 
 ```
-/plugin add github.com/Ramesh-Giri/claude-vent-mode
+/plugin → Marketplaces → Ramesh-Giri/claude-vent-mode
 ```
 
-That's it. Vent Mode activates automatically on every session.
+Then install the plugin from the Discover tab.
+
+## Desktop Notifications (Recommended)
+
+For the best experience, install `terminal-notifier` (macOS):
+
+```bash
+brew install terminal-notifier
+```
+
+When a vent is detected, you'll get an **instant desktop notification** with a random quip — no waiting for Claude to respond.
+
+On Linux, `notify-send` is used automatically (usually pre-installed).
 
 ## How It Works
 
-The plugin has three components:
-
 ### 1. 🧠 Skill (`skills/vent-mode/SKILL.md`)
-Teaches Claude how to classify vents vs. real tasks and respond with humor. Includes:
-- Detection heuristics (message length, keywords, emotional tone)
-- 5 tone categories: Sarcastic, Self-aware, Empathetic, Dramatic, Competitive
-- Escalation rules (consecutive vents get sassier responses)
-- Edge case handling
+Teaches Claude how to classify vents vs. real tasks and respond with humor. Includes 5 tone categories: Sarcastic, Self-aware, Empathetic, Dramatic, and Competitive.
 
-### 2. 🪝 Hook (`hooks/hooks.json` + `hooks/scripts/detect-vent.sh`)
-A `UserPromptSubmit` hook that pre-classifies every incoming message:
-- Runs a lightweight bash script (< 5ms) on each message
-- Scores messages on frustration indicators (keywords, length, punctuation, emojis)
-- Tags likely vents with a system message so Claude's skill knows to activate
-- **Never blocks or modifies real messages**
+### 2. 🪝 Hook (`hooks/scripts/detect-vent.sh`)
+A `UserPromptSubmit` hook that runs on every message:
+- Scores messages on frustration indicators
+- Fires a desktop notification with a random quip (instant, doesn't wait for Claude)
+- Injects context telling Claude to respond with humor and keep working
 
 ### 3. 📟 Command (`commands/vent-mode.md`)
-The `/vent-mode` slash command for:
-- `/vent-mode` or `/vent-mode status` — Check if vent mode is active
+- `/vent-mode` — Check if vent mode is active
 - `/vent-mode demo` — See example vent/response pairs
 - `/vent-mode examples` — Browse all quip categories
 
-## Architecture
-
-```
-claude-vent-mode/
-├── .claude-plugin/
-│   └── plugin.json              # Plugin manifest
-├── skills/
-│   └── vent-mode/
-│       └── SKILL.md             # Core vent detection + response behavior
-├── hooks/
-│   ├── hooks.json               # Hook configuration (UserPromptSubmit + SessionStart)
-│   └── scripts/
-│       └── detect-vent.sh       # Lightweight vent classifier script
-├── commands/
-│   └── vent-mode.md             # /vent-mode slash command
-├── LICENSE
-└── README.md
-```
-
-## Vent Detection
+## Vent Detection v2
 
 Messages are scored on multiple signals:
 
 | Signal | Score |
 |---|---|
-| Short message (≤ 20 words) | +1 |
-| Frustration keywords (wtf, bruh, hurry, slow...) | +2 |
-| Emoji reactions (💀😤🤦😭) | +2 |
-| Very short + non-technical (≤ 5 words) | +1 |
-| Multiple ?! punctuation | +1 |
-| Speed challenges ("are you even working") | +1 |
+| Short message (≤ 5 words) | +1 |
+| Frustration keywords (wtf, bruh, hurry, slow, fuck...) | +2 |
+| Multiple punctuation (???, !!!) | +1 |
+| Speed/existence challenges ("are you even working") | +2 |
+| Single-word reactions (bruh, ugh, ffs, omg) | +3 |
 
-**Score ≥ 3 = Vent** → Claude responds with humor
-**Score < 3 = Real message** → Processed normally
+**Score ≥ 3 = Vent** → Quip fired, Claude keeps working
 
-### Safety Rails
-- **"stop", "cancel", "abort"** → Always treated as real commands, never as vents
-- **Messages with file paths, code, or technical terms** → Always real
-- **Messages > 25 words with substance** → Always real
-- **When in doubt** → Treated as real (never dismisses a genuine instruction)
+### Safety Rails (Zero False Positives)
 
-## Quip Categories
+Messages are **always treated as real instructions** if they:
 
-**Sarcastic 🎭**
-> "Bold words from someone who wrote this code."
+- Start with action verbs: "can you", "fix", "show", "create", "run", "explain"...
+- Contain file paths or code: `.ts`, `.py`, `src/`, `import`, `npm`...
+- Are longer than 10 words
+- Are control commands: "stop", "cancel", "abort"
+- Start with question words without profanity: "what is", "how do I"...
 
-**Self-aware 🤖**
-> "I'm an AI, not a microwave. Quality takes time."
+Profanity overrides the action verb filter — *"can you fix this shit"* is correctly detected as a vent, while *"can you fix the bug"* passes through as a real task.
 
-**Empathetic 💙**
-> "I know, I know. Hang tight — almost there."
+## Quip Examples
 
-**Dramatic 🎬**
-> "Rome wasn't built in a day, and neither is your app."
+> "I'm an AI, not a microwave. Quality takes time." 🤖
 
-**Competitive 💪**
-> "Race me then. Oh wait, you can't type that fast."
+> "Bold words from someone who wrote this code." 🎭
 
-## Escalation
+> "Working on it! Maybe grab a coffee?" ☕
 
-Consecutive vents in the same session get progressively funnier:
+> "Skill issue (yours, not mine)." 💪
 
-1. **1st vent:** Light quip
-2. **2nd vent:** Slightly sassier
-3. **3rd+ vent:** Full dramatic mode — *"Okay at this point I think YOU need a reboot, not me."*
+> "Rome wasn't built in a day, and neither is your app." 🎬
 
-## Configuration
+25 quips across 5 tone categories, with more added regularly.
 
-Vent Mode runs automatically with zero config. The skill has `autoActivate: true` so it loads on every session.
+## Current Limitations
 
-To temporarily disable it, you can uninstall the plugin:
-```
-/plugin remove claude-vent-mode
-```
+> **Transparency note:** This plugin works within the current Claude Code architecture, which has some constraints.
+
+- ✅ **Works:** Quip responses when Claude processes your message between tool calls
+- ✅ **Works:** Desktop notifications fire instantly (even during active tool execution)
+- ⚠️ **Limitation:** Claude can't respond mid-tool-execution (messages queue until the current tool finishes)
+- 🔜 **Pending:** Full mid-execution support — [feature request submitted to Anthropic](https://github.com/anthropics/claude-code/issues)
+
+The desktop notification approach provides the best experience right now — you get an instant quip via notification while Claude keeps working uninterrupted.
 
 ## Contributing
 
-Want to add more quips, improve detection, or add new tone categories? PRs are welcome!
+PRs welcome! Ideas:
 
-Ideas for contributions:
-- **New quip categories** (nerdy, movie references, developer-specific)
-- **Localization** (vent detection in other languages)
-- **Vent analytics** (track how many times you vented per session 😂)
-- **Custom quip packs** (user-contributed personality packs)
-- **Vent leaderboard** (competitive venting across your team)
+- **New quips** — Add to the QUIPS array in `detect-vent.sh`
+- **Language support** — Vent detection in other languages
+- **Custom quip packs** — User-contributed personality packs
+- **Vent analytics** — Track vents per session
 
 ## Why This Exists
 
