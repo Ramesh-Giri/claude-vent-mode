@@ -1,15 +1,24 @@
 {
-  "name": "claude-vent-mode",
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-vent-mode-marketplace",
   "description": "Let users vent their frustrations while Claude is working — with witty responses",
   "owner": {
     "name": "Ramesh-Giri",
-    "url": "https://github.com/Ramesh-Giri"
+    "email": "ramesh@example.com"
   },
   "plugins": [
     {
       "name": "claude-vent-mode",
       "description": "Detects user frustration during active tasks and responds with humor instead of queuing messages",
-      "source": "."
+      "version": "1.0.0",
+      "author": {
+        "name": "Ramesh-Giri"
+      },
+      "source": {
+        "source": "github",
+        "repo": "Ramesh-Giri/claude-vent-mode"
+      },
+      "category": "productivity"
     }
   ]
 }
