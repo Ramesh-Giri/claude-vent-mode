@@ -1,0 +1,11 @@
+{
+  "name": "Claude Vent Mode",
+  "description": "Let users vent their frustrations while Claude is working — with witty responses",
+  "plugins": [
+    {
+      "name": "claude-vent-mode",
+      "description": "Detects user frustration during active tasks and responds with humor instead of queuing messages",
+      "path": "."
+    }
+  ]
+}
