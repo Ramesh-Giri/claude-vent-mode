@@ -25,7 +25,7 @@ When Claude is actively working on a task (editing files, running commands, refa
 Inside Claude Code, run:
 
 ```
-/plugin add https://github.com/darkness/claude-vent-mode
+/plugin add github.com/Ramesh-Giri/claude-vent-mode
 ```
 
 That's it. Vent Mode activates automatically on every session.
