@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-vent.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"Vent Mode plugin is active. You will detect user vents/frustrations during task execution and respond with humor. See the vent-mode skill for guidelines.\"}'",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

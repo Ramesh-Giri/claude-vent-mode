@@ -1,0 +1,21 @@
+{
+  "name": "claude-vent-mode",
+  "version": "1.0.0",
+  "description": "Let users vent their frustrations while Claude is working. Instead of queuing frustrated messages as real tasks, Claude responds with witty, sarcastic, or empathetic quips — without interrupting the actual work in progress.",
+  "author": {
+    "name": "Darkness",
+    "url": "https://github.com/darkness"
+  },
+  "repository": "https://github.com/darkness/claude-vent-mode",
+  "license": "MIT",
+  "keywords": [
+    "vent",
+    "humor",
+    "productivity",
+    "banter",
+    "frustration",
+    "waiting",
+    "fun",
+    "developer-experience"
+  ]
+}
