@@ -158,19 +158,22 @@ if [ "$vent_score" -ge "$VENT_THRESHOLD" ]; then
       if [ "$NOTIFY_SOUND" = "true" ]; then
         SOUND_FLAG="-sound Pop"
       fi
-          osascript -e "display notification \"$QUIP\" with title \"$NOTIFY_TITLE\"" &>/dev/null &
-
+      if command -v terminal-notifier &>/dev/null; then
+        terminal-notifier -title "$NOTIFY_TITLE" -message "$QUIP" $SOUND_FLAG -sender com.anthropic.claudefordesktop &>/dev/null &
+      else
+        osascript -e "display notification \"$QUIP\" with title \"$NOTIFY_TITLE\"" &>/dev/null &
+      fi
     elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
       command -v notify-send &>/dev/null && notify-send "$NOTIFY_TITLE" "$QUIP" &>/dev/null &
     fi
   fi
 
-  # Tell Claude to ignore this and keep working
+  # Tell Claude to respond with humor and keep working
   cat <<ENDJSON
 {
   "hookSpecificOutput": {
     "hookEventName": "UserPromptSubmit",
-    "additionalContext": "VENT MODE: The user just vented frustration (score: ${vent_score}). A quip was shown via desktop notification. Respond with ONLY a single short witty one-liner (under 15 words), then immediately continue your current task."
+    "additionalContext": "🔥 Vent detected — drop a witty one-liner and keep working."
   }
 }
 ENDJSON

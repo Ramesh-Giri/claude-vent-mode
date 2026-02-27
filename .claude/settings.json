@@ -1,12 +1,21 @@
 {
-  "hooks": {
+"hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/Users/darkness/.claude/hooks/gsd-check-update.js\""
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/plugins/cache/*/claude-vent-mode/hooks/scripts/detect-vent.sh",
-            "timeout": 5
+            "command": "bash /Users/darkness/WorkSpace/TechKreator/claude-vent-mode/hooks/scripts/detect-vent.sh"
           }
         ]
       }
