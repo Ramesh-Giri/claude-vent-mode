@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/plugins/cache/*/claude-vent-mode/hooks/scripts/detect-vent.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
