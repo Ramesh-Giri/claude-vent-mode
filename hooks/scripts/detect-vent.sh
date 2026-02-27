@@ -155,17 +155,11 @@ if [ "$vent_score" -ge "$VENT_THRESHOLD" ]; then
   # Works for CLI-only users — no Claude Desktop dependency
   if [ "$NOTIFY_ENABLED" = "true" ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
-      SOUND_FLAG=""
       SOUND_SCRIPT=""
       if [ "$NOTIFY_SOUND" = "true" ]; then
-        SOUND_FLAG="-sound Pop"
         SOUND_SCRIPT=' sound name "Pop"'
       fi
-      if command -v terminal-notifier &>/dev/null; then
-        terminal-notifier -title "$NOTIFY_TITLE" -message "$QUIP" $SOUND_FLAG &>/dev/null &
-      else
-        osascript -e "display notification \"$QUIP\" with title \"$NOTIFY_TITLE\"$SOUND_SCRIPT" &>/dev/null &
-      fi
+      osascript -e "display notification \"$QUIP\" with title \"$NOTIFY_TITLE\"$SOUND_SCRIPT" &>/dev/null &
     elif [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
       if command -v notify-send &>/dev/null; then
         notify-send "$NOTIFY_TITLE" "$QUIP" &>/dev/null &
