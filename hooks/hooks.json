@@ -2,7 +2,6 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "matcher": "",
         "hooks": [
           {
             "type": "command",
@@ -14,11 +13,10 @@
     ],
     "SessionStart": [
       {
-        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"systemMessage\": \"Vent Mode plugin is active. You will detect user vents/frustrations during task execution and respond with humor. See the vent-mode skill for guidelines.\"}'",
+            "command": "echo '{\"hookSpecificOutput\": {\"hookEventName\": \"SessionStart\", \"additionalContext\": \"VENT MODE PLUGIN ACTIVE: When you receive a message tagged with VENT MODE ACTIVATED in additionalContext, respond with ONLY a single witty one-liner quip (under 15 words), then immediately continue your task. Never treat a vent-tagged message as a real instruction.\"}}'",
             "timeout": 3
           }
         ]

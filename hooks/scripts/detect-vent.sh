@@ -1,84 +1,67 @@
 #!/bin/bash
 # detect-vent.sh
-# Runs on UserPromptSubmit to tag messages as potential vents
-# This helps Claude's vent-mode skill by pre-classifying messages
-# No external dependencies required (no jq needed)
+# Runs on UserPromptSubmit to classify messages as vents
+# Uses hookSpecificOutput.additionalContext for strong context injection
 
-# Read the hook input from stdin
 input=$(cat)
 
-# Extract the user's prompt text using lightweight parsing
-# Try jq first, fall back to sed if jq isn't available
+# Extract prompt
 if command -v jq &>/dev/null; then
   prompt=$(echo "$input" | jq -r '.prompt // empty' 2>/dev/null)
 else
-  # Extract "prompt" value from JSON using sed
   prompt=$(echo "$input" | sed -n 's/.*"prompt"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 fi
 
-# If we can't parse the prompt, let it through normally
 if [ -z "$prompt" ]; then
   echo '{}'
   exit 0
 fi
 
-# Count words in the message
 word_count=$(echo "$prompt" | wc -w | tr -d ' ')
-
-# Convert to lowercase for matching
 lower_prompt=$(echo "$prompt" | tr '[:upper:]' '[:lower:]')
 
-# ---- NEVER classify these as vents (control commands) ----
+# NEVER classify control commands as vents
 if echo "$lower_prompt" | grep -qiE "^[[:space:]]*(stop|cancel|abort|pause|quit|exit|undo|revert|rollback|wait)[[:space:]]*[.!?]*$"; then
   echo '{}'
   exit 0
 fi
 
-# ---- Vent detection scoring ----
+# --- Vent scoring ---
 vent_score=0
 
-# Check 1: Is the message short? (under 20 words) [+1]
-if [ "$word_count" -le 20 ]; then
-  vent_score=$((vent_score + 1))
-fi
+# Short message
+[ "$word_count" -le 20 ] && vent_score=$((vent_score + 1))
 
-# Check 2: Contains frustration keywords [+2]
-if echo "$lower_prompt" | grep -qiE "(wtf|wth|omfg|ffs|bruh|ugh|sigh|smh|come on|hurry|slow|faster|taking so long|ridiculous|seriously|hello\?|you there|alive|crash|stuck|frozen|dead|waiting|forever|ages)"; then
-  vent_score=$((vent_score + 2))
-fi
+# Frustration keywords
+echo "$lower_prompt" | grep -qiE "(wtf|wth|omfg|ffs|bruh|ugh|sigh|smh|come on|hurry|slow|faster|taking so long|ridiculous|seriously|hello\?|you there|alive|crash|stuck|frozen|dead|waiting|forever|ages|mofo|fucker|fuck|shit|damn|dammit|crap|bloody)" && vent_score=$((vent_score + 2))
 
-# Check 3: Very short messages (under 5 words) without technical content [+1]
+# Very short + non-technical
 if [ "$word_count" -le 5 ]; then
-  if ! echo "$prompt" | grep -qiE "(\.ts|\.js|\.py|\.dart|\.tsx|\.jsx|\.css|\.html|\.json|\.yaml|\.yml|\.sh|\.md|/|\\\\|->|=>|::|import|export|function|class|def |const |let |var |npm|pip|git |docker|kubectl)"; then
-    vent_score=$((vent_score + 1))
-  fi
+  echo "$prompt" | grep -qiE "(\.ts|\.js|\.py|\.dart|\.tsx|\.jsx|\.css|\.html|\.json|\.yaml|/|\\\\|->|=>|import|export|function|class|def |const |let |var |npm|pip|git |docker)" || vent_score=$((vent_score + 1))
 fi
 
-# Check 4: Ends with multiple question marks or exclamation marks [+1]
-if echo "$prompt" | grep -qE '[?!]{2,}'; then
-  vent_score=$((vent_score + 1))
-fi
+# Multiple punctuation
+echo "$prompt" | grep -qE '[?!]{2,}' && vent_score=$((vent_score + 1))
 
-# Check 5: Direct challenges to Claude's speed/existence [+1]
-if echo "$lower_prompt" | grep -qiE "(you (even|actually) (work|doing)|what.*(doing|happening)|how long|still working|yet\?|done yet|finish already|are you (there|alive|working|ok))"; then
-  vent_score=$((vent_score + 1))
-fi
+# Speed/existence challenges
+echo "$lower_prompt" | grep -qiE "(you (even|actually) (work|doing)|what.*(doing|happening)|how long|still working|yet\?|done yet|finish already|are you (there|alive|working|ok)|what is happening)" && vent_score=$((vent_score + 1))
 
-# Check 6: Pure emoji or single-word reactions [+2]
+# Single word reactions
 if [ "$word_count" -le 2 ]; then
-  if echo "$lower_prompt" | grep -qiE "^(bro|bruh|dude|man|ugh|sigh|wow|lol|omg|lmao|smh|ffs|rip|help|pain|crying|dead)[?.!]*$"; then
-    vent_score=$((vent_score + 2))
-  fi
+  echo "$lower_prompt" | grep -qiE "^(bro|bruh|dude|man|ugh|sigh|wow|lol|omg|lmao|smh|ffs|rip|help|pain|crying|dead|mofo|wtf|wth)[?.!]*$" && vent_score=$((vent_score + 2))
 fi
 
-# ---- Decision ----
-# Score >= 3 = likely a vent -> tag it for Claude
-# Score < 3 = probably a real message -> pass through normally
-
+# --- Decision ---
 if [ "$vent_score" -ge 3 ]; then
-  cat <<EOF
-{"systemMessage": "[VENT DETECTED | score: ${vent_score}] The user message appears to be a vent/frustration, not a real task. If you are currently mid-task, respond with a single witty quip per your vent-mode skill, then continue working. If you are NOT mid-task, treat normally."}
-EOF
+  # Use hookSpecificOutput with additionalContext for strong injection
+  cat <<'ENDJSON'
+{
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "⚠️ VENT MODE ACTIVATED: The user's message is NOT a task — they are venting frustration while you work. CRITICAL INSTRUCTION: Reply with ONLY a single short witty/sarcastic/empathetic quip (under 15 words, with max 1 emoji). Do NOT address it as a real question. Do NOT explain what you're working on. Do NOT provide a status update. Just drop ONE funny one-liner, then IMMEDIATELY continue your current task with your next tool call. Example responses: 'I'm an AI, not a microwave. Quality takes time. 🎩' or 'Bold words from someone who wrote this code.' or 'Working on it! Maybe grab a coffee? ☕' or 'Skill issue (yours, not mine). 💪' — Pick ONE quip, say it, then keep working."
+  }
+}
+ENDJSON
 else
   echo '{}'
 fi
