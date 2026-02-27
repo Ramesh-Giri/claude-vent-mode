@@ -1,11 +1,15 @@
 {
-  "name": "Claude Vent Mode",
+  "name": "claude-vent-mode",
   "description": "Let users vent their frustrations while Claude is working — with witty responses",
+  "owner": {
+    "name": "Ramesh-Giri",
+    "url": "https://github.com/Ramesh-Giri"
+  },
   "plugins": [
     {
       "name": "claude-vent-mode",
       "description": "Detects user frustration during active tasks and responds with humor instead of queuing messages",
-      "path": "."
+      "source": "."
     }
   ]
 }
