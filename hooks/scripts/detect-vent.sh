@@ -1,5 +1,5 @@
 #!/bin/bash
-# detect-vent.sh v2.0
+# detect-vent.sh v2.1
 # Vent detection with desktop notification support
 # Part of claude-vent-mode plugin
 # https://github.com/Ramesh-Giri/claude-vent-mode
@@ -153,18 +153,40 @@ if [ "$vent_score" -ge "$VENT_THRESHOLD" ]; then
 
   # Fire desktop notification (controlled by config)
   # Works for CLI-only users — no Claude Desktop dependency
+  # Tiered approach for reliability: best available method per platform
   if [ "$NOTIFY_ENABLED" = "true" ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
-      # macOS: Use display alert (auto-dismisses after 3s)
-      # Fully detach with subshell so Claude Code's hook runner doesn't wait for it.
-      # Without this, the notification only appears after the entire message queue completes.
+      # macOS: Tiered notification (most reliable → least reliable)
+      # All methods fully detached so Claude Code's hook runner doesn't wait.
       SAFE_QUIP="${QUIP//\"/\\\"}"
       SAFE_TITLE="${NOTIFY_TITLE//\"/\\\"}"
-      ( osascript -e "display alert \"$SAFE_TITLE\" message \"$SAFE_QUIP\" giving up after 3" </dev/null &>/dev/null & ) 2>/dev/null
-      disown 2>/dev/null
+      NOTIFIED=false
+
+      # Tier 1: osascript display notification (zero deps, Notification Center)
+      # Works out of the box on all macOS versions — most reliable default.
+      if [ "$NOTIFIED" = "false" ]; then
+        SOUND_PART=""
+        if [ "$NOTIFY_SOUND" = "true" ]; then
+          SOUND_PART=" sound name \"Blow\""
+        fi
+        ( osascript -e "display notification \"$SAFE_QUIP\" with title \"$SAFE_TITLE\"$SOUND_PART" </dev/null &>/dev/null & ) 2>/dev/null
+        disown 2>/dev/null
+        NOTIFIED=true
+      fi
+
+      # Tier 2: terminal-notifier (richer Notification Center features, needs setup)
+      # Only used if display notification fails — requires macOS notification permission.
+      # Users who prefer this can swap tier order in config (future feature).
+
+      # Tier 3: display alert fallback (modal dialog — always visible but intrusive)
+      if [ "$NOTIFIED" = "false" ]; then
+        ( osascript -e "display alert \"$SAFE_TITLE\" message \"$SAFE_QUIP\" giving up after 3" </dev/null &>/dev/null & ) 2>/dev/null
+        disown 2>/dev/null
+      fi
+
     elif [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
       if command -v notify-send &>/dev/null; then
-        ( notify-send "$NOTIFY_TITLE" "$QUIP" </dev/null &>/dev/null & ) 2>/dev/null
+        ( notify-send -t 3000 "$NOTIFY_TITLE" "$QUIP" </dev/null &>/dev/null & ) 2>/dev/null
         disown 2>/dev/null
       fi
     elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || grep -qi microsoft /proc/version 2>/dev/null; then
