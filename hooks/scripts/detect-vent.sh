@@ -157,7 +157,7 @@ if [ "$vent_score" -ge "$VENT_THRESHOLD" ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
       if command -v terminal-notifier &>/dev/null; then
         # terminal-notifier is the most reliable — own notification entry, works from any parent app
-        TN_ARGS=(-title "$NOTIFY_TITLE" -message "$QUIP")
+        TN_ARGS=(-title "$NOTIFY_TITLE" -message "$QUIP" -sender com.apple.Terminal)
         if [ "$NOTIFY_SOUND" = "true" ]; then
           TN_ARGS+=(-sound Pop)
         fi
