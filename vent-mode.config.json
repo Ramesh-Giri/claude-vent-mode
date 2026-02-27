@@ -1,0 +1,11 @@
+{
+  "notifications": {
+    "enabled": true,
+    "sound": true,
+    "title": "Vent Mode 🔥"
+  },
+  "detection": {
+    "threshold": 3,
+    "max_words": 10
+  }
+}

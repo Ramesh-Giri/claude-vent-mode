@@ -6,6 +6,36 @@
 
 input=$(cat)
 
+# ============================================================
+# LOAD CONFIG
+# ============================================================
+# Config search order: repo root → ~/.config/claude-vent-mode → defaults
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+CONFIG_FILE=""
+if [ -f "$PLUGIN_ROOT/vent-mode.config.json" ]; then
+  CONFIG_FILE="$PLUGIN_ROOT/vent-mode.config.json"
+elif [ -f "$HOME/.config/claude-vent-mode/config.json" ]; then
+  CONFIG_FILE="$HOME/.config/claude-vent-mode/config.json"
+fi
+
+# Defaults
+NOTIFY_ENABLED=true
+NOTIFY_SOUND=true
+NOTIFY_TITLE="Vent Mode 🔥"
+VENT_THRESHOLD=3
+MAX_WORDS=10
+
+# Parse config if found and jq available
+if [ -n "$CONFIG_FILE" ] && command -v jq &>/dev/null; then
+  NOTIFY_ENABLED=$(jq -r '.notifications.enabled // true' "$CONFIG_FILE")
+  NOTIFY_SOUND=$(jq -r '.notifications.sound // true' "$CONFIG_FILE")
+  NOTIFY_TITLE=$(jq -r '.notifications.title // "Vent Mode 🔥"' "$CONFIG_FILE")
+  VENT_THRESHOLD=$(jq -r '.detection.threshold // 3' "$CONFIG_FILE")
+  MAX_WORDS=$(jq -r '.detection.max_words // 10' "$CONFIG_FILE")
+fi
+
 # Extract prompt
 if command -v jq &>/dev/null; then
   prompt=$(echo "$input" | jq -r '.prompt // empty' 2>/dev/null)
@@ -31,8 +61,8 @@ if echo "$lower_prompt" | grep -qiE "^[[:space:]]*(stop|cancel|abort|pause|quit|
   exit 0
 fi
 
-# Messages over 10 words — likely real instructions, skip scoring entirely
-if [ "$word_count" -gt 10 ]; then
+# Messages over MAX_WORDS — likely real instructions, skip scoring entirely
+if [ "$word_count" -gt "$MAX_WORDS" ]; then
   echo '{}'
   exit 0
 fi
@@ -85,9 +115,9 @@ if [ "$word_count" -le 2 ]; then
 fi
 
 # ============================================================
-# DECISION (threshold: 3)
+# DECISION (threshold from config, default: 3)
 # ============================================================
-if [ "$vent_score" -ge 3 ]; then
+if [ "$vent_score" -ge "$VENT_THRESHOLD" ]; then
 
   # --- Desktop notification (optional, fires instantly) ---
   QUIPS=(
@@ -121,15 +151,21 @@ if [ "$vent_score" -ge 3 ]; then
   RANDOM_INDEX=$((RANDOM % ${#QUIPS[@]}))
   QUIP="${QUIPS[$RANDOM_INDEX]}"
 
-  # Fire desktop notification (cross-platform, non-blocking)
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    if command -v terminal-notifier &>/dev/null; then
-      terminal-notifier -title "Vent Mode" -message "$QUIP" -sound Pop -sender com.anthropic.claudefordesktop &>/dev/null &
-    else
-      osascript -e "display notification \"$QUIP\" with title \"Vent Mode\"" &>/dev/null &
+  # Fire desktop notification (controlled by config)
+  if [ "$NOTIFY_ENABLED" = "true" ]; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      SOUND_FLAG=""
+      if [ "$NOTIFY_SOUND" = "true" ]; then
+        SOUND_FLAG="-sound Pop"
+      fi
+      if command -v terminal-notifier &>/dev/null; then
+        terminal-notifier -title "$NOTIFY_TITLE" -message "$QUIP" $SOUND_FLAG -sender com.anthropic.claudefordesktop &>/dev/null &
+      else
+        osascript -e "display notification \"$QUIP\" with title \"$NOTIFY_TITLE\"" &>/dev/null &
+      fi
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+      command -v notify-send &>/dev/null && notify-send "$NOTIFY_TITLE" "$QUIP" &>/dev/null &
     fi
-  elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    command -v notify-send &>/dev/null && notify-send "Vent Mode" "$QUIP" &>/dev/null &
   fi
 
   # Tell Claude to ignore this and keep working

@@ -43,6 +43,34 @@ When a vent is detected, you'll get an **instant desktop notification** with a r
 
 On Linux, `notify-send` is used automatically (usually pre-installed).
 
+## Configuration
+
+Vent Mode works out of the box with sensible defaults. To customize, edit `vent-mode.config.json` in the plugin root:
+
+```json
+{
+  "notifications": {
+    "enabled": true,
+    "sound": true,
+    "title": "Vent Mode 🔥"
+  },
+  "detection": {
+    "threshold": 3,
+    "max_words": 10
+  }
+}
+```
+
+| Setting | Default | Description |
+|---|---|---|
+| `notifications.enabled` | `true` | Toggle desktop notifications on/off |
+| `notifications.sound` | `true` | Play sound with notification (macOS only) |
+| `notifications.title` | `"Vent Mode 🔥"` | Notification title text |
+| `detection.threshold` | `3` | Minimum frustration score to trigger (lower = more sensitive) |
+| `detection.max_words` | `10` | Messages longer than this are always treated as real tasks |
+
+You can also place a config at `~/.config/claude-vent-mode/config.json` for a global override across projects.
+
 ## How It Works
 
 ### 1. 🧠 Skill (`skills/vent-mode/SKILL.md`)
