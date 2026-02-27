@@ -158,11 +158,8 @@ if [ "$vent_score" -ge "$VENT_THRESHOLD" ]; then
       if [ "$NOTIFY_SOUND" = "true" ]; then
         SOUND_FLAG="-sound Pop"
       fi
-      if command -v terminal-notifier &>/dev/null; then
-        terminal-notifier -title "$NOTIFY_TITLE" -message "$QUIP" $SOUND_FLAG -sender com.anthropic.claudefordesktop &>/dev/null &
-      else
-        osascript -e "display notification \"$QUIP\" with title \"$NOTIFY_TITLE\"" &>/dev/null &
-      fi
+          osascript -e "display notification \"$QUIP\" with title \"$NOTIFY_TITLE\"" &>/dev/null &
+
     elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
       command -v notify-send &>/dev/null && notify-send "$NOTIFY_TITLE" "$QUIP" &>/dev/null &
     fi
