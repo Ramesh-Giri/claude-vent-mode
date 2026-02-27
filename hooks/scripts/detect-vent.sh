@@ -152,19 +152,28 @@ if [ "$vent_score" -ge "$VENT_THRESHOLD" ]; then
   QUIP="${QUIPS[$RANDOM_INDEX]}"
 
   # Fire desktop notification (controlled by config)
+  # Works for CLI-only users — no Claude Desktop dependency
   if [ "$NOTIFY_ENABLED" = "true" ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
       SOUND_FLAG=""
+      SOUND_SCRIPT=""
       if [ "$NOTIFY_SOUND" = "true" ]; then
         SOUND_FLAG="-sound Pop"
+        SOUND_SCRIPT=' sound name "Pop"'
       fi
       if command -v terminal-notifier &>/dev/null; then
-        terminal-notifier -title "$NOTIFY_TITLE" -message "$QUIP" $SOUND_FLAG -sender com.anthropic.claudefordesktop &>/dev/null &
+        terminal-notifier -title "$NOTIFY_TITLE" -message "$QUIP" $SOUND_FLAG &>/dev/null &
       else
-        osascript -e "display notification \"$QUIP\" with title \"$NOTIFY_TITLE\"" &>/dev/null &
+        osascript -e "display notification \"$QUIP\" with title \"$NOTIFY_TITLE\"$SOUND_SCRIPT" &>/dev/null &
       fi
-    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-      command -v notify-send &>/dev/null && notify-send "$NOTIFY_TITLE" "$QUIP" &>/dev/null &
+    elif [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
+      if command -v notify-send &>/dev/null; then
+        notify-send "$NOTIFY_TITLE" "$QUIP" &>/dev/null &
+      fi
+    elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || grep -qi microsoft /proc/version 2>/dev/null; then
+      if command -v powershell.exe &>/dev/null; then
+        powershell.exe -Command "[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); \$n=New-Object System.Windows.Forms.NotifyIcon; \$n.Icon=[System.Drawing.SystemIcons]::Information; \$n.Visible=\$true; \$n.ShowBalloonTip(3000,'$NOTIFY_TITLE','$QUIP',[System.Windows.Forms.ToolTipIcon]::Info)" &>/dev/null &
+      fi
     fi
   fi
 
