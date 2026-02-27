@@ -155,23 +155,13 @@ if [ "$vent_score" -ge "$VENT_THRESHOLD" ]; then
   # Works for CLI-only users — no Claude Desktop dependency
   if [ "$NOTIFY_ENABLED" = "true" ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
-      if command -v terminal-notifier &>/dev/null; then
-        # terminal-notifier is the most reliable — own notification entry, works from any parent app
-        TN_ARGS=(-title "$NOTIFY_TITLE" -message "$QUIP" -sender com.apple.Terminal)
-        if [ "$NOTIFY_SOUND" = "true" ]; then
-          TN_ARGS+=(-sound Pop)
-        fi
-        terminal-notifier "${TN_ARGS[@]}" &>/dev/null &
-      else
-        # Fallback to osascript (may be blocked depending on parent app notification settings)
-        SOUND_SCRIPT=""
-        if [ "$NOTIFY_SOUND" = "true" ]; then
-          SOUND_SCRIPT=' sound name "Pop"'
-        fi
-        SAFE_QUIP="${QUIP//\"/\\\"}"
-        SAFE_TITLE="${NOTIFY_TITLE//\"/\\\"}"
-        osascript -e "display notification \"$SAFE_QUIP\" with title \"$SAFE_TITLE\"$SOUND_SCRIPT" &>/dev/null &
-      fi
+      # macOS: Use display alert (auto-dismisses after 3s)
+      # terminal-notifier and display notification are invisible when running from
+      # VS Code/Claude's process context due to macOS notification permissions.
+      # display alert bypasses notification center and reliably shows on screen.
+      SAFE_QUIP="${QUIP//\"/\\\"}"
+      SAFE_TITLE="${NOTIFY_TITLE//\"/\\\"}"
+      osascript -e "display alert \"$SAFE_TITLE\" message \"$SAFE_QUIP\" giving up after 3" &>/dev/null &
     elif [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
       if command -v notify-send &>/dev/null; then
         notify-send "$NOTIFY_TITLE" "$QUIP" &>/dev/null &
