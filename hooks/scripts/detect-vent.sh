@@ -156,21 +156,23 @@ if [ "$vent_score" -ge "$VENT_THRESHOLD" ]; then
   if [ "$NOTIFY_ENABLED" = "true" ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
       # macOS: Use display alert (auto-dismisses after 3s)
-      # terminal-notifier and display notification are invisible when running from
-      # VS Code/Claude's process context due to macOS notification permissions.
-      # display alert bypasses notification center and reliably shows on screen.
+      # Fully detach with subshell so Claude Code's hook runner doesn't wait for it.
+      # Without this, the notification only appears after the entire message queue completes.
       SAFE_QUIP="${QUIP//\"/\\\"}"
       SAFE_TITLE="${NOTIFY_TITLE//\"/\\\"}"
-      osascript -e "display alert \"$SAFE_TITLE\" message \"$SAFE_QUIP\" giving up after 3" &>/dev/null &
+      ( osascript -e "display alert \"$SAFE_TITLE\" message \"$SAFE_QUIP\" giving up after 3" </dev/null &>/dev/null & ) 2>/dev/null
+      disown 2>/dev/null
     elif [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
       if command -v notify-send &>/dev/null; then
-        notify-send "$NOTIFY_TITLE" "$QUIP" &>/dev/null &
+        ( notify-send "$NOTIFY_TITLE" "$QUIP" </dev/null &>/dev/null & ) 2>/dev/null
+        disown 2>/dev/null
       fi
     elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || grep -qi microsoft /proc/version 2>/dev/null; then
       if command -v powershell.exe &>/dev/null; then
         SAFE_QUIP="${QUIP//\'/\'\'}"
         SAFE_TITLE="${NOTIFY_TITLE//\'/\'\'}"
-        powershell.exe -Command "[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); \$n=New-Object System.Windows.Forms.NotifyIcon; \$n.Icon=[System.Drawing.SystemIcons]::Information; \$n.Visible=\$true; \$n.ShowBalloonTip(3000,'$SAFE_TITLE','$SAFE_QUIP',[System.Windows.Forms.ToolTipIcon]::Info)" &>/dev/null &
+        ( powershell.exe -Command "[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); \$n=New-Object System.Windows.Forms.NotifyIcon; \$n.Icon=[System.Drawing.SystemIcons]::Information; \$n.Visible=\$true; \$n.ShowBalloonTip(3000,'$SAFE_TITLE','$SAFE_QUIP',[System.Windows.Forms.ToolTipIcon]::Info)" </dev/null &>/dev/null & ) 2>/dev/null
+        disown 2>/dev/null
       fi
     fi
   fi
